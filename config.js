@@ -7,4 +7,4 @@
  * Example:
  * window.QUIZIFY_API_URL = "https://quizify-backend.onrender.com";
  */
-window.QUIZIFY_API_URL = "https://your-deployed-backend-api.com";
+window.QUIZIFY_API_URL = "https://quizifyfinal-latest.onrender.com";

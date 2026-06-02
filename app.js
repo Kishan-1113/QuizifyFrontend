@@ -8,9 +8,12 @@
 // For production, it reads the URL from config.js (window.QUIZIFY_API_URL).
 const BACKEND_PROD_URL = window.QUIZIFY_API_URL || "https://your-deployed-backend-api.com";
 
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8083'
-    : BACKEND_PROD_URL;
+const isLocal = window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1' || 
+                window.location.protocol === 'file:' || 
+                !window.location.hostname;
+
+const API_BASE = isLocal ? 'http://localhost:8083' : BACKEND_PROD_URL;
 
 // State Variables
 let quizState = {
