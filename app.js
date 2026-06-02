@@ -6,14 +6,14 @@
 // Base API URL configuration
 // For local development, it automatically defaults to http://localhost:8083.
 // For production, it reads the URL from config.js (window.QUIZIFY_API_URL).
-const BACKEND_PROD_URL = window.QUIZIFY_API_URL || "https://quizify-app-2.onrender.com/";
+const BACKEND_PROD_URL = window.QUIZIFY_API_URL || "https://quizify-app-2.onrender.com";
 
 const isLocal = window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
     window.location.protocol === 'file:' ||
     !window.location.hostname;
 
-const API_BASE = 'https://quizify-app-2.onrender.com/';
+const API_BASE = 'https://quizify-app-2.onrender.com';
 
 // State Variables
 let quizState = {
