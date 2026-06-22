@@ -1164,7 +1164,13 @@ function checkAuth() {
     } else {
         // Logged in: show home and user chips
         document.getElementById('nav-home-btn').style.display = 'inline-flex';
-        document.getElementById('nav-premium-btn').style.display = 'inline-flex';
+
+        // Only show Premium subscription link if user is NOT an admin
+        if (authState.user && authState.user.role === 'ADMIN') {
+            document.getElementById('nav-premium-btn').style.display = 'none';
+        } else {
+            document.getElementById('nav-premium-btn').style.display = 'inline-flex';
+        }
 
         // Only show Admin Dashboard link if user is an admin
         if (authState.user && authState.user.role === 'ADMIN') {
