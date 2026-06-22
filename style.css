@@ -1597,3 +1597,126 @@ body.light-mode .theme-toggle-btn:hover {
     height: 4px;
     background: var(--accent-gradient);
 }
+
+/* ==========================================================================
+   SCREEN 7: PREMIUM / SUBSCRIPTION SCREEN STYLES
+   ========================================================================== */
+
+.premium-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.plan-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 35px 25px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--transition);
+    height: 100%;
+}
+
+.plan-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.35);
+}
+
+.plan-card.popular {
+    border: 2px solid var(--primary);
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.04) 0%, rgba(30, 41, 59, 0.8) 100%);
+    box-shadow: 0 15px 35px rgba(139, 92, 246, 0.1);
+}
+
+.plan-ribbon {
+    position: absolute;
+    top: 15px;
+    right: -30px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 35px;
+    transform: rotate(45deg);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.plan-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.plan-price-box {
+    margin-bottom: 20px;
+}
+
+.plan-price {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.plan-currency {
+    font-size: 20px;
+    font-weight: 600;
+    vertical-align: super;
+    margin-right: 1px;
+}
+
+.plan-duration {
+    color: var(--text-secondary);
+    font-size: 13px;
+    display: block;
+    margin-top: 4px;
+}
+
+.plan-features {
+    list-style: none;
+    text-align: left;
+    margin: 15px 0 30px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 0;
+}
+
+.plan-features li {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.plan-features li i {
+    color: var(--success);
+    font-size: 14px;
+}
+
+body.light-mode .plan-card {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .plan-card.popular {
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.03) 0%, rgba(255, 255, 255, 0.9) 100%);
+    border-color: var(--primary);
+}
+
+body.light-mode .plan-price {
+    color: var(--bg-dark);
+}

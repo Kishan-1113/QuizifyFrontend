@@ -42,12 +42,14 @@ const screens = {
     quiz: document.getElementById('quiz-screen'),
     result: document.getElementById('result-screen'),
     admin: document.getElementById('admin-screen'),
-    auth: document.getElementById('auth-screen')
+    auth: document.getElementById('auth-screen'),
+    premium: document.getElementById('premium-screen')
 };
 
 const navBtns = {
     home: document.getElementById('nav-home-btn'),
-    admin: document.getElementById('nav-admin-btn')
+    admin: document.getElementById('nav-admin-btn'),
+    premium: document.getElementById('nav-premium-btn')
 };
 
 // Initialize Application
@@ -86,6 +88,11 @@ function initNavigation() {
     navBtns.home.addEventListener('click', () => {
         resetQuizState();
         showScreen('home');
+    });
+    navBtns.premium.addEventListener('click', () => {
+        resetQuizState();
+        showScreen('premium');
+        loadPremiumPlans();
     });
     navBtns.admin.addEventListener('click', () => {
         resetQuizState();
@@ -158,6 +165,8 @@ function showScreen(screenKey) {
 
     if (screenKey === 'home' || screenKey === 'setup' || screenKey === 'result') {
         if (navBtns.home) navBtns.home.classList.add('active');
+    } else if (screenKey === 'premium') {
+        if (navBtns.premium) navBtns.premium.classList.add('active');
     } else if (screenKey === 'admin') {
         if (navBtns.admin) navBtns.admin.classList.add('active');
     }
@@ -616,6 +625,40 @@ function displayResultDetails(result) {
 
     const incorrectQs = result.totalQuestions - result.score;
     document.getElementById('result-incorrect-qs').textContent = incorrectQs;
+
+    // Calculate rating based on difficulty formula
+    let easyCount = 0;
+    let medCount = 0;
+    let hardCount = 0;
+
+    quizState.questions.forEach(q => {
+        const diff = (q.difficulty || 'Medium').toLowerCase();
+        if (diff === 'easy') easyCount++;
+        else if (diff === 'hard') hardCount++;
+        else medCount++;
+    });
+
+    const difScore = (easyCount * 1.0) + (medCount * 1.5) + (hardCount * 2.5);
+    const accuracy = result.totalQuestions > 0 ? (result.score / result.totalQuestions) : 0;
+    const attemptRating = difScore * (accuracy * accuracy);
+
+    let finalRating = attemptRating;
+
+    if (quizState.difficulty === 'Any') {
+        const ratingSpans = document.querySelectorAll('#user-ratings-table-body tr td:nth-child(4) span span');
+        let oldRating = 0.0;
+        if (ratingSpans && ratingSpans.length > 0) {
+            const textContent = ratingSpans[0].textContent;
+            const match = textContent.match(/Rating:\s*([\d.]+)/);
+            if (match) {
+                oldRating = parseFloat(match[1]);
+            }
+        }
+        finalRating = 0.9 * oldRating + 0.1 * attemptRating;
+    }
+
+    finalRating = Math.round(finalRating * 100) / 100;
+    document.getElementById('result-rating').textContent = finalRating.toFixed(2);
 
     // Headline message based on performance
     const headline = document.getElementById('result-headline');
@@ -1119,6 +1162,7 @@ function checkAuth() {
 
         // Logged out: hide navigation links and show auth screen
         document.getElementById('nav-home-btn').style.display = 'none';
+        document.getElementById('nav-premium-btn').style.display = 'none';
         document.getElementById('nav-admin-btn').style.display = 'none';
         document.getElementById('user-profile-menu').style.display = 'none';
 
@@ -1135,6 +1179,7 @@ function checkAuth() {
     } else {
         // Logged in: show home and user chips
         document.getElementById('nav-home-btn').style.display = 'inline-flex';
+        document.getElementById('nav-premium-btn').style.display = 'inline-flex';
 
         // Only show Admin Dashboard link if user is an admin
         if (authState.user && authState.user.role === 'ADMIN') {
@@ -1334,6 +1379,9 @@ async function loadUserRatings() {
             if (percentage >= 80) ratingColor = '#10b981'; // Green
 
             const formattedDate = new Date(log.timestamp).toLocaleString();
+            
+            // Get rating from DB, or calculate it on the fly if not present
+            const ratingVal = typeof log.rating === 'number' ? log.rating : calculatePastRating(log);
 
             tr.innerHTML = `
                 <td><strong>${escapeHTML(log.quizTitle)}</strong></td>
@@ -1341,7 +1389,10 @@ async function loadUserRatings() {
                 <td><span class="badge-difficulty difficulty-${(log.difficulty || 'Any').toLowerCase()}">${escapeHTML(log.difficulty || 'Any')}</span></td>
                 <td>
                     <div style="display: flex; flex-direction: column; gap: 3px;">
-                        <span style="font-weight: 700; color: ${ratingColor}; font-size: 13px;">${log.score}/${log.totalQuestions} (${percentage}%)</span>
+                        <span style="font-weight: 700; color: ${ratingColor}; font-size: 13.5px;">
+                            ${log.score}/${log.totalQuestions} (${percentage}%) 
+                            <span style="color: #60a5fa; margin-left: 8px; font-weight: 600;"><i class="fa-solid fa-star" style="font-size: 11px; color: #f59e0b;"></i> Rating: ${ratingVal.toFixed(2)}</span>
+                        </span>
                         <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden;">
                             <div style="width: ${percentage}%; height: 100%; background: ${ratingColor};"></div>
                         </div>
@@ -1354,6 +1405,18 @@ async function loadUserRatings() {
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${escapeHTML(err.message)}</td></tr>`;
     }
+}
+
+function calculatePastRating(log) {
+    const diff = (log.difficulty || 'Any').toLowerCase();
+    let multiplier = 1.5;
+    if (diff === 'easy') multiplier = 1.0;
+    else if (diff === 'hard') multiplier = 2.5;
+    else if (diff === 'medium') multiplier = 1.5;
+
+    const difScore = log.totalQuestions * multiplier;
+    const accuracy = log.totalQuestions > 0 ? (log.score / log.totalQuestions) : 0;
+    return Math.round(difScore * (accuracy * accuracy) * 100) / 100;
 }
 
 window.editQuestionTrigger = function (id) {
@@ -1519,6 +1582,121 @@ function initAdminQuizForm() {
             submitBtn.innerHTML = '<i class="fa-solid fa-plus-circle"></i> Create Quiz & Save';
         }
     });
+}
+
+// ==========================================================================
+// PREMIUM / SUBSCRIPTION LOGIC
+// ==========================================================================
+
+async function loadPremiumPlans() {
+    const plansList = document.getElementById('premium-plans-list');
+    if (!plansList) return;
+
+    plansList.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size: 28px; color: var(--primary);"></i> Loading plans...</div>';
+
+    try {
+        const response = await authFetch(`${API_BASE}/premium/plans`);
+        if (!response.ok) throw new Error("Failed to load premium plans.");
+        const plans = await response.json();
+
+        plansList.innerHTML = "";
+        if (plans.length === 0) {
+            plansList.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">No premium plans available right now.</div>';
+            return;
+        }
+
+        // Sort plans so shorter validity is first
+        plans.sort((a, b) => a.validity - b.validity);
+
+        plans.forEach((plan) => {
+            const isPopular = plan.validity === 90 || plan.planName.toLowerCase().includes('3-month');
+            const planCard = document.createElement('div');
+            planCard.className = `plan-card ${isPopular ? 'popular' : ''}`;
+
+            let featuresHTML = "";
+            if (plan.validity <= 30) {
+                featuresHTML = `
+                    <ul class="plan-features">
+                        <li><i class="fa-solid fa-circle-check"></i> Unlimited Transient Quizzes</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Ad-free Interface</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Custom Difficulty Config</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Standard Rating Tracking</li>
+                    </ul>
+                `;
+            } else {
+                featuresHTML = `
+                    <ul class="plan-features">
+                        <li><i class="fa-solid fa-circle-check"></i> All 1-Month Benefits</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Create & Save Quizzes</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Advanced Ratings Log</li>
+                        <li><i class="fa-solid fa-circle-check"></i> 15% Bundle Discount</li>
+                    </ul>
+                `;
+            }
+
+            const buttonText = authState.user && authState.user.role === 'PREMIUM' ? 'Current Plan' : 'Upgrade Now';
+            const buttonDisabled = authState.user && authState.user.role === 'PREMIUM' ? 'disabled' : '';
+
+            planCard.innerHTML = `
+                ${isPopular ? '<div class="plan-ribbon">Popular</div>' : ''}
+                <div>
+                    <h3 class="plan-name">${escapeHTML(plan.planName)}</h3>
+                    <div class="plan-price-box">
+                        <span class="plan-price"><span class="plan-currency">₹</span>${plan.price}</span>
+                        <span class="plan-duration">/ ${plan.validity} Days</span>
+                    </div>
+                    ${featuresHTML}
+                </div>
+                <button class="btn btn-primary w-full subscribe-btn" data-plan-id="${plan.planId}" ${buttonDisabled}>
+                    ${buttonText}
+                </button>
+            `;
+
+            const subBtn = planCard.querySelector('.subscribe-btn');
+            if (subBtn && (!authState.user || authState.user.role !== 'PREMIUM')) {
+                subBtn.addEventListener('click', () => {
+                    subscribeToPlan(plan.planId);
+                });
+            }
+
+            plansList.appendChild(planCard);
+        });
+    } catch (err) {
+        plansList.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--danger); padding: 40px;"><i class="fa-solid fa-triangle-exclamation"></i> Error: ${escapeHTML(err.message)}</div>`;
+    }
+}
+
+async function subscribeToPlan(planId) {
+    if (!confirm("Confirm subscription? Your account will be upgraded to Premium!")) return;
+
+    try {
+        const response = await authFetch(`${API_BASE}/premium/plans`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ planId: planId })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Subscription failed.");
+        }
+
+        const data = await response.json(); // {status, message}
+
+        if (authState.user) {
+            authState.user.role = 'PREMIUM';
+            localStorage.setItem('quizify_user', JSON.stringify(authState.user));
+            checkAuth(); // refresh UI menu role
+        }
+
+        showToast(data.message || "Successfully subscribed to Premium plan!", "success");
+        loadPremiumPlans(); // refresh widget
+
+    } catch (err) {
+        showToast(err.message, "error");
+    }
 }
 
 
