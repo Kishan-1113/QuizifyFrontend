@@ -626,7 +626,7 @@ function displayResultDetails(result) {
     const incorrectQs = result.totalQuestions - result.score;
     document.getElementById('result-incorrect-qs').textContent = incorrectQs;
 
-    // Calculate rating based on difficulty formula
+    // Calculate rating based on difficulty formula for this particular attempt
     let easyCount = 0;
     let medCount = 0;
     let hardCount = 0;
@@ -642,23 +642,8 @@ function displayResultDetails(result) {
     const accuracy = result.totalQuestions > 0 ? (result.score / result.totalQuestions) : 0;
     const attemptRating = difScore * (accuracy * accuracy);
 
-    let finalRating = attemptRating;
-
-    if (quizState.difficulty === 'Any') {
-        const ratingSpans = document.querySelectorAll('#user-ratings-table-body tr td:nth-child(4) span span');
-        let oldRating = 0.0;
-        if (ratingSpans && ratingSpans.length > 0) {
-            const textContent = ratingSpans[0].textContent;
-            const match = textContent.match(/Rating:\s*([\d.]+)/);
-            if (match) {
-                oldRating = parseFloat(match[1]);
-            }
-        }
-        finalRating = 0.9 * oldRating + 0.1 * attemptRating;
-    }
-
-    finalRating = Math.round(finalRating * 100) / 100;
-    document.getElementById('result-rating').textContent = finalRating.toFixed(2);
+    const roundedAttemptRating = Math.round(attemptRating * 100) / 100;
+    document.getElementById('result-rating').textContent = roundedAttemptRating.toFixed(2);
 
     // Headline message based on performance
     const headline = document.getElementById('result-headline');
@@ -1367,7 +1352,35 @@ async function loadUserRatings() {
         tbody.innerHTML = "";
         if (logs.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 20px;">No quiz completions logged yet. Play a quiz to see your ratings!</td></tr>';
+            const finalRatingElem = document.getElementById('final-rating-value');
+            if (finalRatingElem) finalRatingElem.textContent = "0.00";
             return;
+        }
+
+        // Calculate running cumulative rating from oldest to newest
+        let runningRating = 0.0;
+        for (let i = logs.length - 1; i >= 0; i--) {
+            const log = logs[i];
+            const diff = (log.difficulty || 'Any').toLowerCase();
+            
+            let multiplier = 1.5;
+            if (diff === 'easy') multiplier = 1.0;
+            else if (diff === 'hard') multiplier = 2.5;
+            else if (diff === 'medium') multiplier = 1.5;
+
+            const accuracy = log.totalQuestions > 0 ? (log.score / log.totalQuestions) : 0;
+            const attemptRating = (log.totalQuestions * multiplier) * (accuracy * accuracy);
+
+            if (diff === 'any') {
+                runningRating = 0.9 * runningRating + 0.1 * attemptRating;
+            } else {
+                runningRating = attemptRating;
+            }
+        }
+
+        const finalRatingElem = document.getElementById('final-rating-value');
+        if (finalRatingElem) {
+            finalRatingElem.textContent = runningRating.toFixed(2);
         }
 
         logs.forEach(log => {
@@ -1379,9 +1392,6 @@ async function loadUserRatings() {
             if (percentage >= 80) ratingColor = '#10b981'; // Green
 
             const formattedDate = new Date(log.timestamp).toLocaleString();
-            
-            // Get rating from DB, or calculate it on the fly if not present
-            const ratingVal = typeof log.rating === 'number' ? log.rating : calculatePastRating(log);
 
             tr.innerHTML = `
                 <td><strong>${escapeHTML(log.quizTitle)}</strong></td>
@@ -1389,10 +1399,7 @@ async function loadUserRatings() {
                 <td><span class="badge-difficulty difficulty-${(log.difficulty || 'Any').toLowerCase()}">${escapeHTML(log.difficulty || 'Any')}</span></td>
                 <td>
                     <div style="display: flex; flex-direction: column; gap: 3px;">
-                        <span style="font-weight: 700; color: ${ratingColor}; font-size: 13.5px;">
-                            ${log.score}/${log.totalQuestions} (${percentage}%) 
-                            <span style="color: #60a5fa; margin-left: 8px; font-weight: 600;"><i class="fa-solid fa-star" style="font-size: 11px; color: #f59e0b;"></i> Rating: ${ratingVal.toFixed(2)}</span>
-                        </span>
+                        <span style="font-weight: 700; color: ${ratingColor}; font-size: 13.5px;">${log.score}/${log.totalQuestions} (${percentage}%)</span>
                         <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden;">
                             <div style="width: ${percentage}%; height: 100%; background: ${ratingColor};"></div>
                         </div>
@@ -1405,18 +1412,6 @@ async function loadUserRatings() {
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${escapeHTML(err.message)}</td></tr>`;
     }
-}
-
-function calculatePastRating(log) {
-    const diff = (log.difficulty || 'Any').toLowerCase();
-    let multiplier = 1.5;
-    if (diff === 'easy') multiplier = 1.0;
-    else if (diff === 'hard') multiplier = 2.5;
-    else if (diff === 'medium') multiplier = 1.5;
-
-    const difScore = log.totalQuestions * multiplier;
-    const accuracy = log.totalQuestions > 0 ? (log.score / log.totalQuestions) : 0;
-    return Math.round(difScore * (accuracy * accuracy) * 100) / 100;
 }
 
 window.editQuestionTrigger = function (id) {
